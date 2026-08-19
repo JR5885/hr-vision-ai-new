@@ -1,9 +1,9 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { SYSTEM_PROMPT, buildUserPrompt } from "@/lib/systemPrompt";
 
 export const runtime = "nodejs";
 
 const MODEL = "gemini-1.5-flash";
+const SYSTEM_PROMPT = "你是一位專業的 HR 戰略顧問，請針對使用者的組織挑戰提供專業、可落地的診斷與行動方案。";
 
 export async function POST(req: Request) {
   let body: { message?: string; domains?: string[] };
@@ -14,18 +14,13 @@ export async function POST(req: Request) {
   }
 
   const message = (body.message ?? "").trim();
-  const domains = Array.isArray(body.domains) ? body.domains : [];
-
   if (!message) {
     return new Response("Missing `message`", { status: 400 });
   }
 
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
-    return new Response(
-      "Server is missing GEMINI_API_KEY. Set it in .env.local.",
-      { status: 500 }
-    );
+    return new Response("Server is missing GEMINI_API_KEY", { status: 500 });
   }
 
   const genAI = new GoogleGenerativeAI(apiKey);
@@ -40,7 +35,7 @@ export async function POST(req: Request) {
     async start(controller) {
       try {
         const result = await model.generateContentStream(
-          buildUserPrompt(message, domains)
+          `請分析以下 HR 議題並提供診斷建議：\n${message}`
         );
 
         for await (const chunk of result.stream) {
