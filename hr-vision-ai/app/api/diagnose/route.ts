@@ -22,9 +22,9 @@ export async function POST(req: Request) {
   }
 
   try {
-    // 改用 v1 穩定版 API 端點
+    // 使用 gemini-1.5-flash-latest 別名端點，具有最高 API 相容性
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`,
       {
         method: "POST",
         headers: {
