@@ -1,6 +1,5 @@
 export const runtime = "nodejs";
 
-const MODEL = "gemini-2.0-flash";
 const SYSTEM_PROMPT =
   "你是一位專業的 HR 戰略顧問，請針對使用者的組織挑戰提供專業、可落地的診斷與行動方案。";
 
@@ -23,8 +22,9 @@ export async function POST(req: Request) {
   }
 
   try {
+    // 使用最新 v1beta REST API 的正確端點與模型代碼
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
       {
         method: "POST",
         headers: {
