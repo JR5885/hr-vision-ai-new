@@ -3,6 +3,15 @@ export const runtime = "nodejs";
 const SYSTEM_PROMPT =
   "你是一位專業的 HR 戰略顧問，請針對使用者的組織挑戰提供專業、可落地的診斷與行動方案。";
 
+// 自動備援模型清單（按優先順序嘗試，確保 100% 呼叫成功）
+const CANDIDATE_MODELS = [
+  "gemini-2.0-flash",
+  "gemini-2.5-flash",
+  "gemini-1.5-flash-latest",
+  "gemini-1.5-flash-002",
+  "gemini-1.5-pro",
+];
+
 export async function POST(req: Request) {
   let body: { message?: string; domains?: string[] };
   try {
@@ -21,48 +30,53 @@ export async function POST(req: Request) {
     return new Response("Server is missing GEMINI_API_KEY", { status: 500 });
   }
 
-  try {
-    // 使用 gemini-1.5-flash-latest 別名端點，具有最高 API 相容性
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          contents: [
-            {
-              role: "user",
-              parts: [
-                {
-                  text: `${SYSTEM_PROMPT}\n\n請分析以下 HR 議題並提供診斷建議：\n${message}`,
-                },
-              ],
-            },
-          ],
-        }),
+  let lastErrorMessage = "";
+
+  // 依序嘗試可用模型
+  for (const model of CANDIDATE_MODELS) {
+    try {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            contents: [
+              {
+                role: "user",
+                parts: [
+                  {
+                    text: `${SYSTEM_PROMPT}\n\n請分析以下 HR 議題並提供診斷建議：\n${message}`,
+                  },
+                ],
+              },
+            ],
+          }),
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        const replyText =
+          data.candidates?.[0]?.content?.parts?.[0]?.text ||
+          "未能取得有效診斷建議。";
+
+        return new Response(replyText, {
+          headers: {
+            "Content-Type": "text/plain; charset=utf-8",
+          },
+        });
       }
-    );
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      return new Response(`Gemini API Error: ${errorText}`, {
-        status: response.status,
-      });
+      lastErrorMessage = await response.text();
+    } catch (err: any) {
+      lastErrorMessage = err.message;
     }
-
-    const data = await response.json();
-    const replyText =
-      data.candidates?.[0]?.content?.parts?.[0]?.text ||
-      "未能取得有效診斷建議。";
-
-    return new Response(replyText, {
-      headers: {
-        "Content-Type": "text/plain; charset=utf-8",
-      },
-    });
-  } catch (err: any) {
-    return new Response(`Error: ${err.message}`, { status: 500 });
   }
+
+  return new Response(`Gemini API Error: ${lastErrorMessage}`, {
+    status: 500,
+  });
 }
