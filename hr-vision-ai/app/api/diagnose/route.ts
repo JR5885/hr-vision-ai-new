@@ -1,6 +1,6 @@
 export const runtime = "nodejs";
 
-const MODEL = "gemini-1.5-flash";
+const MODEL = "gemini-2.0-flash";
 const SYSTEM_PROMPT =
   "你是一位專業的 HR 戰略顧問，請針對使用者的組織挑戰提供專業、可落地的診斷與行動方案。";
 
@@ -54,7 +54,6 @@ export async function POST(req: Request) {
 
     const data = await response.json();
     const replyText =
-      data.candidates?.[0]?.content?.[0]?.text ||
       data.candidates?.[0]?.content?.parts?.[0]?.text ||
       "未能取得有效診斷建議。";
 
